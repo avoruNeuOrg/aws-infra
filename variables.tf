@@ -32,3 +32,7 @@ variable "profile" {
   description = "The profile to use for AWS"
 }
 
+
+variable "ami"{
+  description = "The AMI to use for the EC2 instance"
+}
