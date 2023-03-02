@@ -134,13 +134,13 @@ resource "aws_security_group" "application_sg_ingressRules" {
     cidr_blocks = ["0.0.0.0/0"]
   }  
 
-  ingress {
-    description = "TCP traffic to port anywhere"
-    to_port     = var.app_port
-    from_port   = var.app_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # ingress {
+  #   description = "TCP traffic to port anywhere"
+  #   to_port     = var.app_port
+  #   from_port   = var.app_port
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"]
+  # }
 
   //for testing purpose
   egress {
@@ -309,22 +309,21 @@ resource "aws_iam_instance_profile" "s3ImageBucket_profile" {
 //RDS Parameter Group
 
 //RDS Instance
-resourse "aws_db_instance" "rds_instance"{
-  database_engine = "postgres"
+resource "aws_db_instance" "rds_instance"{
+  allocated_storage = 10
+  identifier = "csye6225"
+  db_name = "csye6225"
+  engine = "postgres"
   engine_version = "14.1"
   instance_class = "db.t3.micro"
-  mutli_az = false
-  db_instance_identifier = "csye6225"
+  # mutli_az = false
   username = "csye6225"
-  password = var.db_password
-  identifier = "csye6225"
-  subnet_group_name = aws_subnet.private_subnets[0].tags.Name
-  parameter_group_name= aws_db_parameter_group.rds_parameter_group.name
+  password = var.db_password  
+  db_subnet_group_name = aws_db_subnet_group.private_subnet_group.name
+  parameter_group_name= aws_db_parameter_group.postgres_parameter_group.name
   publicly_accessible = false
-  db_name = "csye6225"
-  allocated_storage = 10
   skip_final_snapshot = true
-  vpc_security_group_ids = [aws_security_group.database_security_group.id]
+  vpc_security_group_ids = [aws_security_group.database_sg.id]
 }
 
 
@@ -338,8 +337,9 @@ resource "aws_db_subnet_group" "private_subnet_group"{
 
 
 //DB Security Group
-resource "aws_security_group" "database_security_group"{
+resource "aws_security_group" "database_sg"{
   name="database_security_group"
+  vpc_id = aws_vpc.vpc.id
   ingress {
     description = "TCP"
     from_port   = 5432
@@ -357,13 +357,10 @@ resource "aws_security_group" "database_security_group"{
 #   cidr_blocks       = ["aws_security_group.application_sg_ingressRules.cidr_blocks"]
 # }
 
-
 resource "aws_s3_bucket_acl" "s3_acl"{
   bucket = aws_s3_bucket.s3ImageBucket.id
   acl="private"
 }
-
-
 
 //RDS Parameter Group
 resource "aws_db_parameter_group" "postgres_parameter_group"{
