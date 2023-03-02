@@ -36,3 +36,19 @@ variable "profile" {
 variable "ami"{
   description = "The AMI to use for the EC2 instance"
 }
+
+variable "internet_gateway_cidr"{
+  description = "The CIDR block for the internet gateway"
+}
+
+variable "db_password"{
+  description = "The password for the database"
+}
+
+variable "assignment"{
+  description = "The assignment name"  
+}
+
+variable "app_port"{
+  description = "The port the application is running on"
+}
