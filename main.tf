@@ -349,13 +349,13 @@ resource "aws_security_group" "database_security_group"{
     }
 }
 
-resource "aws_security_group_rule" "rds_ingress_egress" {
-  type              = "ingress"
-  from_port         = 5432
-  to_port           = 5432
-  protocol          = "tcp"
-  cidr_blocks       = ["aws_security_group.application_sg_ingressRules.cidr_blocks"]
-}
+# resource "aws_security_group_rule" "rds_ingress_egress" {
+#   type              = "ingress"
+#   from_port         = 5432
+#   to_port           = 5432
+#   protocol          = "tcp"
+#   cidr_blocks       = ["aws_security_group.application_sg_ingressRules.cidr_blocks"]
+# }
 
 
 resource "aws_s3_bucket_acl" "s3_acl"{
