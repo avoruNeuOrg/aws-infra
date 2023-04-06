@@ -186,16 +186,26 @@ resource "aws_instance" "appServer"{
                         echo "DB_PASSWORD=${var.db_password}" >> .env
                         echo "AWS_BUCKET_NAME=${aws_s3_bucket.s3ImageBucket.bucket}" >> .env
                         echo "AWS_REGION=${var.region}" >> .env
-                        sudo systemctl start webapp
-                        sudo systemctl status webapp
-                        sudo systemctl enable webapp
+                        pm2 start src/mainServer.js
+                        #npm run dev 
+                        pm2 save
+                        pm2 list
+
+                        sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+                        -a fetch-config \
+                        -m ec2 \
+                        -c file:/opt/cloudwatch-config.json \
+                        -s
+
+                        systemctl enable amazon-cloudwatch-agent.service
+                        systemctl start amazon-cloudwatch-agent.service
+
+
 EOF
   tags = {
     Name = "${var.assignment}-ec2_instance"
   }
 }
-
-
 
 
 //S3 
@@ -275,6 +285,7 @@ resource "aws_iam_policy" "iam_policy_imageS3Bucket_access" {
 }
 
 
+
 //Role
 resource "aws_iam_role" "s3ImageBucket_role" {
   name ="EC2-CSYE6225"
@@ -299,6 +310,14 @@ resource "aws_iam_role_policy_attachment" "iam_policy_imageS3Bucket_access"{
   role=aws_iam_role.s3ImageBucket_role.name
   policy_arn=aws_iam_policy.iam_policy_imageS3Bucket_access.arn
 }
+
+
+resource "aws_iam_policy_attachment" "policy_role_attach2" {
+  name       = "policy_role_attach"
+  roles      = [aws_iam_role.s3ImageBucket_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
 
 //Instance Profile
 resource "aws_iam_instance_profile" "s3ImageBucket_profile" {
@@ -366,6 +385,20 @@ resource "aws_s3_bucket_acl" "s3_acl"{
 resource "aws_db_parameter_group" "postgres_parameter_group"{
   name="postgres-parameter-group"
   family="postgres14"
+}
+
+
+data "aws_route53_zone" "selected" {
+  name         = "prod.infinitysuits.me"
+  private_zone = false
+}
+
+resource "aws_route53_record" "www" {
+  zone_id = data.aws_route53_zone.selected.zone_id
+  name    = "${data.aws_route53_zone.selected.name}"
+  type    = "A"
+  ttl     = "60"
+  records = [aws_instance.appServer.public_ip]
 }
 
 
