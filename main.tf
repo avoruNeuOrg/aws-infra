@@ -279,7 +279,7 @@ resource "aws_db_instance" "rds_instance"{
   identifier = "csye6225"
   db_name = "csye6225"
   engine = "postgres"
-  engine_version = "14.1"
+  engine_version = "14.3"
   instance_class = "db.t3.micro"
   # mutli_az = false
   username = "csye6225"
@@ -358,6 +358,14 @@ resource "aws_security_group" "loadBalancer_sg"{
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  egress {
+    description = "All traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
 }
 
 resource "aws_security_group" "WebAppSecurityGroup" {
@@ -379,7 +387,17 @@ resource "aws_security_group" "WebAppSecurityGroup" {
     to_port     = 4000
     protocol    = "tcp"
     security_groups = [aws_security_group.loadBalancer_sg.id]
+    # cidr_blocks = ["0.0.0.0/0"] ## FOR TESTING
   }  
+
+  # ingress {
+  #   description = "WEB-SOCKET"
+  #   from_port   = 80
+  #   to_port     = 80
+  #   protocol    = "tcp"
+  #   # security_groups = [aws_security_group.loadBalancer_sg.id]
+  #   cidr_blocks = ["0.0.0.0/0"] ## FOR TESTING
+  # }  
 
   //for testing purpose
   egress {
@@ -400,7 +418,7 @@ resource "aws_launch_template" "template_launch" {
       volume_type           = "gp2"
     }
   }
-  disable_api_termination = true
+  disable_api_termination = false
   iam_instance_profile {
     name = aws_iam_instance_profile.s3ImageBucket_profile.name
   }
@@ -580,9 +598,9 @@ resource "aws_route53_record" "server1-record" {
   }
 }
 
-resource "aws_cloudwatch_log_group" "csye6225" {
-  name = "csye6225"
-}
+# resource "aws_cloudwatch_log_group" "csye6225" {
+#   name = "csye6225"
+# }
 
 
 # // Application  Security Group
