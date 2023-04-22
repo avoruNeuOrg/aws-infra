@@ -9,4 +9,5 @@ ami = "ami-08ede876917b5004e"
 assignment = "ass-5"
 db_password="root_postgres"
 app_port=4000
-
+db_port=5432
+domain_name = "prod.infinitysuits.me"
