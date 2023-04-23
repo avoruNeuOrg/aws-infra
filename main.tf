@@ -289,6 +289,8 @@ resource "aws_db_instance" "rds_instance"{
   publicly_accessible = false
   skip_final_snapshot = true
   vpc_security_group_ids = [aws_security_group.database_sg.id]
+  storage_encrypted      = true
+  kms_key_id             = aws_kms_key.rds_kms_key.arn
 }
 
 
@@ -412,10 +414,13 @@ resource "aws_launch_template" "template_launch" {
   name = "EC2_launch_template"
   block_device_mappings {
     device_name = "/dev/xvdg"
+    
     ebs {
       delete_on_termination = true
       volume_size           = 50
       volume_type           = "gp2"
+      encrypted             = true
+      kms_key_id            = aws_kms_key.ebs_kms_key.arn
     }
   }
   disable_api_termination = false
@@ -564,8 +569,11 @@ resource "aws_lb_target_group" "target_group" {
 
 resource "aws_lb_listener" "front_end" {
   load_balancer_arn = aws_lb.lb.arn
-  port              = "80"
-  protocol          = "HTTP"
+  # port              = "80"
+  # protocol          = "HTTP"
+  port              = "443"
+  protocol          = "HTTPS"
+  certificate_arn   = "arn:aws:acm:us-east-1:435677752779:certificate/24f23687-57b6-4939-9494-d611133e2c1c"
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.target_group.arn
@@ -657,3 +665,120 @@ resource "aws_route53_record" "server1-record" {
 #     cidr_blocks = ["0.0.0.0/0"]
 #   }
 # }
+
+
+
+resource "aws_kms_key" "rds_kms_key" {
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${var.user_account_id}:user/${var.account_prefix}AdminUser"
+        }
+        Action = [
+          "kms:*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_kms_alias" "rds_alias" {
+  name          = "alias/rds_Symmetric"
+  target_key_id = aws_kms_key.rds_kms_key.key_id
+}
+
+resource "aws_kms_key" "ebs_kms_key" {
+  customer_master_key_spec = "SYMMETRIC_DEFAULT"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        "Sid" : "Enable IAM User Permissions",
+        "Effect" : "Allow",
+        "Principal" : {
+          "AWS" : "arn:aws:iam::${var.user_account_id}:root"
+        },
+        "Action" : "kms:*",
+        "Resource" : "*"
+      },
+      {
+        "Sid" : "Allow access for Key Administrators",
+        "Effect" : "Allow",
+        "Principal" : {
+          "AWS" : [
+            "arn:aws:iam::${var.user_account_id}:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+            "arn:aws:iam::${var.user_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          ]
+        },
+        "Action" : [
+          "kms:Create*",
+          "kms:Describe*",
+          "kms:Enable*",
+          "kms:List*",
+          "kms:Put*",
+          "kms:Update*",
+          "kms:Revoke*",
+          "kms:Disable*",
+          "kms:Get*",
+          "kms:Delete*",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion"
+        ],
+        "Resource" : "*"
+      },
+      {
+        "Sid" : "Allow use of the key",
+        "Effect" : "Allow",
+        "Principal" : {
+          "AWS" : [
+            "arn:aws:iam::${var.user_account_id}:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+            "arn:aws:iam::${var.user_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          ]
+        },
+        "Action" : [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ],
+        "Resource" : "*"
+      },
+      {
+        "Sid" : "Allow attachment of persistent resources",
+        "Effect" : "Allow",
+        "Principal" : {
+          "AWS" : [
+            "arn:aws:iam::${var.user_account_id}:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+            "arn:aws:iam::${var.user_account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          ]
+        },
+        "Action" : [
+          "kms:CreateGrant",
+          "kms:ListGrants",
+          "kms:RevokeGrant"
+        ],
+        "Resource" : "*",
+        "Condition" : {
+          "Bool" : {
+            "kms:GrantIsForAWSResource" : "true"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_kms_alias" "ebs_alias" {
+  name          = "alias/ebs"
+  target_key_id = aws_kms_key.ebs_kms_key.key_id
+}
+

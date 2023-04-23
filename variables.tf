@@ -60,3 +60,14 @@ variable "db_port"{
 variable "domain_name"{
   description = "The domain name for the application"
 }
+
+
+variable "user_account_id" {
+  type    = string
+  default = "435677752779"
+}
+
+variable "account_prefix"  {
+  type    = string
+  default = "demo"
+}
